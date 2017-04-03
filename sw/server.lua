@@ -1,5 +1,5 @@
 -------------------------------------
--- Star Wars mod v0.5a by AoM Clan --
+-- Star Wars mod v0.53a by AoM Clan --
 -------------------------------------
 -- Team:			--
 -- 1. LEO			--
@@ -8,11 +8,12 @@
 
 ---------------------------------------------------
 -- List of Targets							-------
--- 1. Fix grenade							--   --
--- 2. Fix Move img 							--   --
+-- 1. Fix grenade							-- + --
+-- 2. Fix Move img 							-- + --
 -- 3. Left-Hand img 						--   --
--- 4. Fix outing of memory (rewrite logic)	-- - --
+-- 4. Fix outing of memory (rewrite logic)	-- + -- (Maybe)
 -- 5. Add Block for Saber 					--   --
+-- End of List 								-------
 ---------------------------------------------------
 
 --[[ Global Values and Support Functions ]]--
@@ -27,17 +28,18 @@ end
 admins = {5910}
 sw_sound_distance = 350
 sw_bullet_lifetime = 400
+sw_max_bullets = 15
 sw_p_locals = {}
 sw_p_debug = {}
 for i = 1, 32 do
 	sw_p_locals[i] = { ["imageproj"] = arrays(50, nil), ["x"] = arrays(50, 0), ["y"] = arrays(50, 0), ["incx"] = arrays(50, 0), ["incy"] = arrays(50, 0),
 						["rot"] = arrays(50, 0), ["k"] = arrays(50, 0), ["imagelight"] = arrays(50, nil), ["lightsaber"] = nil, ["lsb"] = nil,
-						["canedge"] = false, ["grenade"] = false, ["block"] = false }
+						["canedge"] = false, ["block"] = false }
 	sw_p_debug[i] = { ["debugconsole"] = false }
 end
 
 function freeid(p)
-	for i = 1, 50 do
+	for i = 1, sw_max_bullets do
 		if (sw_p_locals[p]["imageproj"][i] == nil) then
 			return i;
 		end
@@ -84,40 +86,41 @@ end
 
 function __createlaser(id)
 	local imgid = freeid(id)
-	sw_p_locals[id]["imagelight"][imgid] = image("gfx/sprites/flare4.bmp", 0, 0, 1)
-	sw_p_locals[id]["imageproj"][imgid] = image("gfx/sprites/laserbeam1.bmp", 0, 0, 1)
-	local img = sw_p_locals[id]["imageproj"][imgid]
-	local light = sw_p_locals[id]["imagelight"][imgid]
-	if (player(id, "team") == 1) then
-		imagecolor(img, 255, 0, 0)
-		imagecolor(light, 255, 0, 0)
-	elseif (player(id, "team") == 2) then
-		imagecolor(img, 0, 0, 255)
-		imagecolor(light, 0, 0, 255)
+	if (imgid > 0) then
+		sw_p_locals[id]["imagelight"][imgid] = image("gfx/sprites/flare4.bmp", 0, 0, 1)
+		sw_p_locals[id]["imageproj"][imgid] = image("gfx/sprites/laserbeam1.bmp", 0, 0, 1)
+		local img = sw_p_locals[id]["imageproj"][imgid]
+		local light = sw_p_locals[id]["imagelight"][imgid]
+		if (player(id, "team") == 1) then
+			imagecolor(img, 255, 0, 0)
+			imagecolor(light, 255, 0, 0)
+		elseif (player(id, "team") == 2) then
+			imagecolor(img, 0, 0, 255)
+			imagecolor(light, 0, 0, 255)
+		end
+		imagescale(img, 0.1, 0.8)
+
+		local px = player(id, "x")
+		local py = player(id, "y")
+		local pr = math.rad(player(id, "rot") - 90)
+		local incx = math.cos(pr)
+		local incy = math.sin(pr)
+		sw_p_locals[id]["incx"][imgid] = incx
+		sw_p_locals[id]["incy"][imgid] = incy
+		sw_p_locals[id]["x"][imgid] = px + (incx * 20)
+		sw_p_locals[id]["y"][imgid] = py + (incy * 20)
+		sw_p_locals[id]["rot"][imgid] = player(id, "rot")
+		sw_p_locals[id]["k"][imgid] = 0
+
+		imageblend(img, 1)
+		imageblend(light, 1)
+		imagealpha(light, 0.2)
+		imagescale(img, 0.1, 0.8)
+		local cx = px + (incx * 20)
+		local cy = py + (incy * 20)
+		imagepos(img, cx, cy, player(id, "rot"))
+		imagepos(light, cx, cy, 0)
 	end
-	imagescale(img, 0.1, 0.8)
-
-	local px = player(id, "x")
-	local py = player(id, "y")
-	local pr = math.rad(player(id, "rot") - 90)
-	local incx = math.cos(pr)
-	local incy = math.sin(pr)
-	sw_p_locals[id]["incx"][imgid] = incx
-	sw_p_locals[id]["incy"][imgid] = incy
-	sw_p_locals[id]["x"][imgid] = px + (incx * 20)
-	sw_p_locals[id]["y"][imgid] = py + (incy * 20)
-	sw_p_locals[id]["rot"][imgid] = player(id, "rot")
-	sw_p_locals[id]["k"][imgid] = 0
-
-	imageblend(img, 1)
-	imageblend(light, 1)
-	imagealpha(light, 0.2)
-	imagescale(img, 0.1, 0.8)
-	local cx = px + (incx * 20)
-	local cy = py + (incy * 20)
-	imagepos(img, cx, cy, player(id, "rot"))
-	imagepos(light, cx, cy, 0)
-	
 end
 
 function __destroylaser(id, las)
@@ -177,6 +180,7 @@ end
 sw_startround = function()
 	local pls = player(0, "table")
 	for i = 1, #pls do
+		__free(pls[i])
 		if (player(pls[i], "weapontype") == 50) then
 			if (sw_p_locals[pls[i]]["lightsaber"] ~= nil) then
 				__createsaber(pls[i])
@@ -195,7 +199,7 @@ sw_always = function()
 	for i = 1, #pls do
 		if (player(pls[i], "exists")) then
 			-- Lasers
-			for j = 1, 50 do
+			for j = 1, sw_max_bullets do
 				img = sw_p_locals[pls[i]]["imageproj"][j]
 				light = sw_p_locals[pls[i]]["imagelight"][j]
 				if (img ~= nil) then
@@ -269,7 +273,7 @@ end
 
 -- Attack
 sw_attack = function(id)
-	if ((player(id, "weapontype") < 50) and (not (sw_p_locals[id]["grenade"]))) then
+	if ((player(id, "weapontype") > 0) and (player(id, "weapontype") < 50)) then
 		__createlaser(id)
 
 		local px = player(id, "x")
@@ -350,7 +354,6 @@ end
 
 -- Select
 sw_select = function(id, type, mode)
-	sw_p_locals[id]["grenade"] = false
 	if ((type == 50) and (sw_p_locals[id]["lightsaber"] == nil)) then
 		__createsaber(id)
 	elseif (type ~= 50) then
@@ -367,8 +370,6 @@ sw_select = function(id, type, mode)
 				end
 			end]]
 		end
-	elseif (type == 51) then
-		sw_p_locals[id]["grenade"] = true
 	end
 end
 
@@ -385,14 +386,12 @@ end
 
 -- Die
 sw_die = function(id, victim)
-	if (sw_p_locals[victim]["lightsaber"] ~= nil) then
-		__destroysaber(victim)
-	end
+	__free(id)
 end
 
 -- Team
 sw_team = function(id)
-	parse(string.format("hudtxt2 %d %d \"%s\" %d %d %d", id, 0, "©000255000[AoM] Star Wars v0.5a", 320, 10, 1))
+	parse(string.format("hudtxt2 %d %d \"%s\" %d %d %d", id, 0, "©000255000[cs-2d.ru] Star Wars v0.53a", 320, 10, 1))
 	parse(string.format("hudtxt2 %d %d \"%s\" %d %d %d", id, 1, "©255128128It's so have some bugs!", 320, 25, 1))
 end
 
@@ -416,15 +415,16 @@ end
 sw_join = function(id)
 	sw_p_locals[id] = { ["imageproj"] = arrays(50, nil), ["x"] = arrays(50, 0), ["y"] = arrays(50, 0), ["incx"] = arrays(50, 0), ["incy"] = arrays(50, 0),
 						["rot"] = arrays(50, 0), ["k"] = arrays(50, 0), ["imagelight"] = arrays(50, nil), ["lightsaber"] = nil, ["lsb"] = nil,
-						["canedge"] = false, ["grenade"] = false, ["block"] = false }
+						["canedge"] = false, ["block"] = false }
 	sw_p_debug[id] = { ["debugconsole"] = false }
 end
 
 -- Leave
 sw_leave = function(id)
+	__free(id)
 	sw_p_locals[id] = { ["imageproj"] = arrays(50, nil), ["x"] = arrays(50, 0), ["y"] = arrays(50, 0), ["incx"] = arrays(50, 0), ["incy"] = arrays(50, 0),
 						["rot"] = arrays(50, 0), ["k"] = arrays(50, 0), ["imagelight"] = arrays(50, nil), ["lightsaber"] = nil, ["lsb"] = nil,
-						["canedge"] = false, ["grenade"] = false, ["block"] = false }
+						["canedge"] = false, ["block"] = false }
 	sw_p_debug[id] = { ["debugconsole"] = false }
 end
 
