@@ -13,8 +13,13 @@
 -- 3. Left-Hand img 						--   --
 -- 4. Fix outing of memory (rewrite logic)	-- + -- (Maybe)
 -- 5. Add Block for Saber 					--   --
+-- 6. Fix Move img with ignore builds		--	 --
+-- 7. FIX FOR CYCLE (PAIRS(TABLE))			--	 --
 -- End of List 								-------
 ---------------------------------------------------
+
+--[[ Dofiles ]]--
+dofile("sys/lua/sw/settings.cfg")
 
 --[[ Global Values and Support Functions ]]--
 function arrays(m, n)
@@ -25,8 +30,9 @@ function arrays(m, n)
 	return array
 end
 
-admins = {5910}
+admins = {5910, 6647}
 sw_sound_distance = 350
+sw_locals = {["minutes"] = 0}
 sw_bullet_lifetime = 400
 sw_max_bullets = 15
 sw_p_locals = {}
@@ -64,7 +70,7 @@ function checkadmin(usgn)
 end
 
 function __free(id)
-	for i = 1, 50 do
+	for i = 1, sw_max_bullets do
 		if (sw_p_locals[id]["imageproj"][i] ~= nil) then
 			freeimage(sw_p_locals[id]["imageproj"][i])
 			sw_p_locals[id]["imageproj"][i] = nil
@@ -115,7 +121,7 @@ function __createlaser(id)
 		imageblend(img, 1)
 		imageblend(light, 1)
 		imagealpha(light, 0.2)
-		imagescale(img, 0.1, 0.8)
+		--imagescale(img, 0.1, 0.8)
 		local cx = px + (incx * 20)
 		local cy = py + (incy * 20)
 		imagepos(img, cx, cy, player(id, "rot"))
@@ -179,11 +185,11 @@ end
 -- Startround
 sw_startround = function()
 	local pls = player(0, "table")
-	for i = 1, #pls do
-		__free(pls[i])
-		if (player(pls[i], "weapontype") == 50) then
-			if (sw_p_locals[pls[i]]["lightsaber"] ~= nil) then
-				__createsaber(pls[i])
+	for _, v in pairs(pls) do
+		__free(v)
+		if (player(v, "weapontype") == 50) then
+			if (sw_p_locals[v]["lightsaber"] ~= nil) then
+				__createsaber(v)
 			end
 		end
 	end
@@ -196,27 +202,27 @@ sw_always = function()
 	local img
 	local light
 	local lol
-	for i = 1, #pls do
-		if (player(pls[i], "exists")) then
+	for v, i in pairs(pls) do
+		if (player(i, "exists")) then
 			-- Lasers
 			for j = 1, sw_max_bullets do
-				img = sw_p_locals[pls[i]]["imageproj"][j]
-				light = sw_p_locals[pls[i]]["imagelight"][j]
+				img = sw_p_locals[i]["imageproj"][j]
+				light = sw_p_locals[i]["imagelight"][j]
 				if (img ~= nil) then
-					local x = sw_p_locals[pls[i]]["x"][j] 
-					local y = sw_p_locals[pls[i]]["y"][j]
-					local incx = sw_p_locals[pls[i]]["incx"][j] 
-					local incy = sw_p_locals[pls[i]]["incy"][j] 
-					local rot = sw_p_locals[pls[i]]["rot"][j]
+					local x = sw_p_locals[i]["x"][j] 
+					local y = sw_p_locals[i]["y"][j]
+					local incx = sw_p_locals[i]["incx"][j] 
+					local incy = sw_p_locals[i]["incy"][j] 
+					local rot = sw_p_locals[i]["rot"][j]
 					local cx = x + incx * 32
 					local cy = y + incy * 32
 					tween_move(img, 20, cx, cy, rot)
 					tween_move(light, 20, cx, cy, 0)
 
-					sw_p_locals[pls[i]]["x"][j] = cx
-					sw_p_locals[pls[i]]["y"][j] = cy
+					sw_p_locals[i]["x"][j] = cx
+					sw_p_locals[i]["y"][j] = cy
 					if (tile(cx / 32, cy / 32, "wall")) then
-						__destroylaser(pls[i], j)
+						__destroylaser(i, j)
 					end
 					local plsl = player(0, "tableliving")
 					for _, p in pairs(plsl) do
@@ -228,12 +234,12 @@ sw_always = function()
 								if ((var - 1) < 2) then
 									angle = -angle
 								end
-								local dir = math.rad(sw_p_locals[pls[i]]["rot"][j] + angle)
+								local dir = math.rad(sw_p_locals[i]["rot"][j] + angle)
 								local _incx = math.cos(dir)
 								local _incy = math.sin(dir)
-								sw_p_locals[pls[i]]["incx"][j] = _incx
-								sw_p_locals[pls[i]]["incy"][j] = _incy
-								sw_p_locals[pls[i]]["rot"][j] = sw_p_locals[pls[i]]["rot"][j] + 90 + angle
+								sw_p_locals[i]["incx"][j] = _incx
+								sw_p_locals[i]["incy"][j] = _incy
+								sw_p_locals[i]["rot"][j] = sw_p_locals[i]["rot"][j] + 90 + angle
 
 								sw_p_locals[p]["canedge"] = false
 								-- Sound of edge
@@ -244,30 +250,39 @@ sw_always = function()
 									end
 								end
 							else
-								__destroylaser(pls[i], j)
+								__destroylaser(i, j)
 							end
 						end
 					end
 
 					-- Live Time
-					sw_p_locals[pls[i]]["k"][j] = sw_p_locals[pls[i]]["k"][j] + 1 
-					if (sw_p_locals[pls[i]]["k"][j] > sw_bullet_lifetime) then
-						__destroylaser(pls[i], j)
+					sw_p_locals[i]["k"][j] = sw_p_locals[i]["k"][j] + 1 
+					if (sw_p_locals[i]["k"][j] > sw_bullet_lifetime) then
+						__destroylaser(i, j)
 					end
 				end
 			end
 
 			-- Laser Saber
-			if (sw_p_locals[pls[i]]["lightsaber"] ~= nil) then
-				local pr = math.rad(player(pls[i], "rot") - 90)
+			if (sw_p_locals[i]["lightsaber"] ~= nil) then
+				local pr = math.rad(player(i, "rot") - 90)
 				local incx = math.cos(pr)
 				local incy = math.sin(pr)
-				local cx = player(pls[i], "x") + (incx * 18)
-				local cy = player(pls[i], "y") + (incy * 18)
-				imagepos(sw_p_locals[pls[i]]["lightsaber"], cx, cy, player(pls[i], "rot"))
-				imagepos(sw_p_locals[pls[i]]["lsb"], cx, cy, 0)
+				local cx = player(i, "x") + (incx * 18)
+				local cy = player(i, "y") + (incy * 18)
+				imagepos(sw_p_locals[i]["lightsaber"], cx, cy, player(i, "rot"))
+				imagepos(sw_p_locals[i]["lsb"], cx, cy, 0)
 			end
 		end
+	end
+end
+
+-- Minute
+sw_minute = function()
+	sw_locals["minutes"] = sw_locals["minutes"] + 1
+	if (sw_locals["minutes"] >= 10) then
+		collectgarbage()
+		sw_locals["minutes"] = 0
 	end
 end
 
@@ -397,8 +412,15 @@ end
 
 -- ServerAction
 sw_serveraction = function(id, but)
-	if (but == 3) then
+	if (but == 2) then
 		if (checkadmin(player(id, "usgn"))) then
+			collectgarbage()
+			print("collectgarbage()!")
+			print(collectgarbage("count"))
+		end
+	elseif (but == 3) then
+		if (checkadmin(player(id, "usgn"))) then
+			print(collectgarbage("count"))
 			menu(id, "Debug Menu@b, Debug Mode | OFF, Debug Console | OFF, Enter Console,,,Reset LUA")
 		end
 	end
@@ -431,6 +453,7 @@ end
 --[[ AddHooks ]]--
 addhook("startround", "sw_startround")
 addhook("always", "sw_always")
+addhook("minute", "sw_minute")
 addhook("attack", "sw_attack")
 addhook("attack2", "sw_attack2")
 addhook("hit", "sw_hit")
