@@ -1,0 +1,23 @@
+// Heroes File
+//
+// Add Heroes Here ...
+// Note: You have to set values between their sizes.
+// [Name]		> ( A - Z , a - z , 0 - 9 )
+// [Affiliation]	> ( Republic ; Empire )
+// [Class]		> ( Offense ; Defense ; Support )
+// [Health]		> ( 100 - 250 )
+// [Speed]		> (-) 15
+// [Item(s)]		> ( 1 - 100 ) ( For IDs check "weapon IDs.txt" file ) e.g. 4,32,51
+//
+// e.g. #hero : Trooper : Republic : Offense : 175 : 201: 5
+//
+
+//[Add Hero] : [Name] : [Affiliation] : [Class] : [Health] : [Armor] : [Speed] : [Item(s)] : [Passive Skill] : [Skill] : [Ultimate Skill]
+#hero : Trooper : Republic : Offense : 175 : 0 : 5 : 32 : #z_health_regen~3~5 : #z_protect_barrier~25~1~5
+#hero : Bounty Hunter : Empire : Offense : 150 : 0 : 10 : 4 : #z_critical_chance~20~200 : #s_explosive_shoot
+#hero : Jedi Knight : Republic : Offense : 175 : 0 : 7 : 50 : #z_protect_barrier~25~1~5 : #s_deflect_skill
+#hero : Sith Warrior : Empire : Offense : 175 : 0 : 7 : 50 : #z_stackable_dmg~3~5~10 : #s_swift_strike
+#hero : Smuggler : Republic : Defense : 150 : 0 : 5 : 24 : #z_star_engineer~100~3~5 : #s_build_objects
+#hero : Imperial Agent : Empire : Defense : 125 : 0 : 5 : 35,21 : #z_invisible_stealth~5 : #s_
+//#hero : Medic : Republic : Support : 125 : 0 : 5 : 6 : #z_health_regen~3~5
+//#hero : Operative :  
